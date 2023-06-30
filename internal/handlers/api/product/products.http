@@ -1,0 +1,30 @@
+POST http://0.0.0.0:10000/products
+Content-Type: Application/json
+
+{
+  "name": "Каша",
+  "price": 100,
+  "buy_at": "22.06.2023 14:04",
+  "description": "Каша осяная с датой"
+}
+
+###
+POST http://0.0.0.0:10000/products
+Content-Type: Application/json
+
+{
+  "name": "Каша",
+  "price": 100,
+  "description": "Каша осяная без даты"
+}
+
+
+###
+
+GET http://0.0.0.0:10000/products
+Accept: application/json
+
+###
+
+GET http://0.0.0.0:10000/products/report?from=22.06.2023&to=24.06.2023
+Accept: application/json
