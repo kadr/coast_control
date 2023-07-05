@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+package cost_control;
+option go_package = "../src";
+
+
+service ProductServices {
+  rpc Add(CreateProductRequest) returns (CreateProductResponse) {}
+  rpc Update(UpdateProductRequest) returns (Response) {}
+  rpc Get(ProductRequest) returns (GetProductResponse) {}
+  rpc Search(Filter) returns (SearchProductResponse) {}
+  rpc Delete(ProductRequest) returns (Response) {}
+  rpc Report(Filter) returns (ReportResponse) {}
+}
+
+message Product {
+  string id = 1;
+  string name = 2;
+  float price = 3;
+  string description = 4;
+  optional google.protobuf.Timestamp buy_at = 5;
+  string user = 6;
+}
+
+message Filter {
+  optional google.protobuf.Timestamp from = 1;
+  optional google.protobuf.Timestamp to = 2;
+}
+
+
+message CreateProductRequest {
+  string name = 1;
+  float price = 2;
+  optional string description = 3;
+  google.protobuf.Timestamp buy_at = 4;
+  string user = 5;
+}
+
+message UpdateProductRequest {
+  string id = 1;
+  optional string name = 2;
+  optional float price = 3;
+  optional string description = 4;
+  optional google.protobuf.Timestamp buy_at = 5;
+  optional string user = 6;
+}
+
+message ProductRequest {
+  string id = 1;
+}
+
+message CreateProductResponse {
+  bool error = 1;
+  optional string errorMessage = 2;
+  optional string id = 3;
+}
+
+message GetProductResponse {
+  bool error = 1;
+  optional string errorMessage = 2;
+  Product product = 3;
+}
+
+message SearchProductResponse {
+  bool error = 1;
+  optional string errorMessage = 2;
+  repeated Product products = 3;
+}
+
+message Response {
+  bool error = 1;
+  optional string errorMessage = 2;
+}
+message ReportResponse {
+  Period period = 1;
+  repeated GroupByUsers groupByUsers = 2;
+  float sum = 3;
+}
+
+message Period {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+}
+
+message GroupByUsers {
+  string user = 1;
+  float sum = 2;
+}
