@@ -14,6 +14,7 @@ type Config struct {
 			Database   string `env:"DATABASE" env-default:"cost_control"`
 		}
 	}
+	SignedKey string `env:"SIGNED_KEY" env-required:"true"`
 }
 
 func GetConfig() (*Config, error) {
