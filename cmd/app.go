@@ -4,12 +4,15 @@ import (
 	"github.com/cost_control"
 	"github.com/cost_control/config"
 	"github.com/cost_control/internal/handlers/api"
+	"github.com/cost_control/internal/handlers/rpc"
 	"github.com/cost_control/internal/handlers/telegram"
 	"github.com/cost_control/pkg/repository"
 	"log"
+	"sync"
 )
 
 const botToken = "5836425300:AAG2azf8sY54f_Y9Mod1PM9vY6IzIWRpnq0"
+const RestApiServerPort = 10000
 
 func main() {
 	cfg, err := config.GetConfig()
@@ -31,12 +34,31 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = telegramBot.Start(nil, nil)
+	rpcHandler := rpc.New(db)
+	var wg sync.WaitGroup
+	wg.Add(3)
+	srv := new(cost_control.Server)
+	go func(wg *sync.WaitGroup, restApiServerPort int) {
+		log.Print("Start Rest Api server")
+		if err := srv.Run(restApiServerPort, apiHandlers.InitRoutes()); err != nil {
+			log.Fatal(err)
+			wg.Done()
+		}
+	}(&wg, RestApiServerPort)
+
+	go func(wg *sync.WaitGroup) {
+		err = telegramBot.Start(wg, nil, nil)
+		if err != nil {
+			log.Fatal(err)
+			wg.Done()
+		}
+	}(&wg)
+
+	err = rpcHandler.Start()
 	if err != nil {
 		log.Fatal(err)
+		wg.Done()
 	}
-	srv := new(cost_control.Server)
-	if err := srv.Run(10000, apiHandlers.InitRoutes()); err != nil {
-		log.Fatal(err)
-	}
+
+	wg.Wait()
 }
