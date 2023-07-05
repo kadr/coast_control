@@ -7,6 +7,7 @@ import (
 	"github.com/cost_control/internal/service"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 )
@@ -30,7 +31,7 @@ func (rh RpcHandler) Start() error {
 	}
 	opts := []grpc.ServerOption{}
 	grpcServer := grpc.NewServer(opts...)
-
+	reflection.Register(grpcServer)
 	pb.RegisterProductServicesServer(grpcServer, &rh.productRpcServer)
 	err = grpcServer.Serve(listener)
 	if err != nil {
