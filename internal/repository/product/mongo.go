@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 )
 
@@ -44,6 +45,9 @@ func (pm ProductMongo) Update(ctx context.Context, id string, product models.Pro
 	if !product.BuyAt.IsZero() {
 		updatedProduct["buy_at"] = product.BuyAt.String()
 	}
+	if product.User != "" {
+		updatedProduct["user"] = product.User
+	}
 	update := bson.D{{"$set", updatedProduct}}
 
 	_, err = pm.db.UpdateOne(ctx, bson.D{{"_id", objectID}}, update)
@@ -56,7 +60,11 @@ func (pm ProductMongo) Update(ctx context.Context, id string, product models.Pro
 
 func (pm ProductMongo) GetAll(ctx context.Context, filter interface{}) ([]models.Product, error) {
 	var products []models.Product
-	cursor, err := pm.db.Find(ctx, filter)
+	options := options.Find()
+	// Sort by `_id` field descending
+	options.SetSort(bson.D{{"buy_at", -1}})
+	options.SetLimit(100)
+	cursor, err := pm.db.Find(ctx, filter, options)
 	defer cursor.Close(ctx)
 	if err != nil {
 		return nil, err
