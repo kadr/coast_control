@@ -19,10 +19,10 @@ type Product struct {
 	User        string    `json:"user,omitempty" bson:"user,omitempty"`
 }
 
-func NewProduct(name, description string, price float32, byuAt *time.Time, user string) (Product, error) {
+func NewProduct(name, description string, price float32, byuAt time.Time, user string) (Product, error) {
 	var err error
 	var byuAtDate time.Time
-	if byuAt == nil {
+	if byuAt.IsZero() {
 		byuAtDate, err = time.ParseInLocation(dateTimeFormatBSON, time.Now().Local().String(), time.Local)
 	} else {
 		byuAtDate, err = time.ParseInLocation(dateTimeFormatBSON, byuAt.String(), time.Local)
