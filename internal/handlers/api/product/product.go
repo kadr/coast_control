@@ -3,7 +3,7 @@ package product
 import (
 	"context"
 	"github.com/cost_control/internal/handlers/utils"
-	"github.com/cost_control/internal/models"
+	"github.com/cost_control/internal/service"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,10 +12,10 @@ import (
 )
 
 type IProductService interface {
-	Create(ctx context.Context, product models.Product) (string, error)
-	Update(ctx context.Context, id string, product models.Product) error
-	GetAll(ctx context.Context, filter interface{}) ([]models.Product, error)
-	GetById(ctx context.Context, id string) (models.Product, error)
+	Create(ctx context.Context, product service.ProductServiceInput) (string, error)
+	Update(ctx context.Context, id string, product service.ProductServiceInput) error
+	GetAll(ctx context.Context, filter interface{}) ([]service.ProductServiceOutput, error)
+	GetById(ctx context.Context, id string) (service.ProductServiceOutput, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -29,23 +29,19 @@ func New(productService IProductService) *ProductApiHandler {
 }
 
 func (pah ProductApiHandler) Create(c *gin.Context) {
-	var createProduct CreateProductDTO
-	if err := c.BindJSON(&createProduct); err != nil {
+	var dto CreateProductDTO
+	if err := c.BindJSON(&dto); err != nil {
 		pah.Response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	product, err := models.NewProduct(
-		createProduct.Name,
-		createProduct.Description,
-		createProduct.Price,
-		createProduct.BuyAt,
-		"",
-	)
-	if err != nil {
-		pah.Response.Error(c, http.StatusInternalServerError, err.Error())
-		return
+	productInput := service.ProductServiceInput{
+		Name:        dto.Name,
+		Price:       dto.Price,
+		Description: dto.Description,
+		BuyAt:       dto.BuyAt,
+		User:        dto.User,
 	}
-	id, err := pah.productService.Create(context.Background(), product)
+	id, err := pah.productService.Create(context.Background(), productInput)
 	if err != nil {
 		pah.Response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -54,12 +50,12 @@ func (pah ProductApiHandler) Create(c *gin.Context) {
 }
 
 func (pah ProductApiHandler) Update(c *gin.Context) {
-	var product models.Product
-	if err := c.BindJSON(&product); err != nil {
+	productInput := service.ProductServiceInput{}
+	if err := c.BindJSON(&productInput); err != nil {
 		pah.Response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err := pah.productService.Update(context.Background(), c.Param("id"), product)
+	err := pah.productService.Update(context.Background(), c.Param("id"), productInput)
 	if err != nil {
 		pah.Response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -102,11 +98,14 @@ func (pah ProductApiHandler) Report(c *gin.Context) {
 		return
 	}
 	var sum float32
+	result := make(map[string]float32)
 	for _, product := range products {
 		sum += product.Price
+		result[product.User] += product.Price
 	}
+	result["sum"] = sum
 
-	pah.Response.Success(c, http.StatusOK, map[string]float32{"result": sum})
+	pah.Response.Success(c, http.StatusOK, result)
 
 }
 

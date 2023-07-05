@@ -11,28 +11,28 @@ const dateTimeFormatJSON = "02.01.2006 15:04"
 const dateTimeFormatJSONWithoutTime = "02.01.2006"
 
 type CreateProductDTO struct {
-	Name        string     `json:"name"`
-	Price       float32    `json:"price"`
-	BuyAt       *time.Time `json:"buy_at,omitempty"`
-	Description string     `json:"description,omitempty"`
-	User        string     `json:"user"`
+	Name        string    `json:"name"`
+	Price       float32   `json:"price"`
+	BuyAt       time.Time `json:"buy_at,omitempty"`
+	Description string    `json:"description,omitempty"`
+	User        string    `json:"user"`
 }
 
 type UpdateProductDTO struct {
-	Id          string     `json:"id,omitempty"`
-	Name        string     `json:"name,omitempty"`
-	Price       float32    `json:"price,omitempty"`
-	BuyAt       *time.Time `json:"buy_at,omitempty"`
-	Description string     `json:"description,omitempty"`
+	Id          string    `json:"id,omitempty"`
+	Name        string    `json:"name,omitempty"`
+	Price       float32   `json:"price,omitempty"`
+	BuyAt       time.Time `json:"buy_at,omitempty"`
+	Description string    `json:"description,omitempty"`
 }
 
 type GetProductDTO struct {
-	Id          string     `json:"id,omitempty"`
-	Name        string     `json:"name,omitempty"`
-	Price       float32    `json:"price,omitempty"`
-	BuyAt       *time.Time `json:"buy_at,omitempty"`
-	Description string     `json:"description,omitempty"`
-	User        string     `json:"user"`
+	Id          string    `json:"id,omitempty"`
+	Name        string    `json:"name,omitempty"`
+	Price       float32   `json:"price,omitempty"`
+	BuyAt       time.Time `json:"buy_at,omitempty"`
+	Description string    `json:"description,omitempty"`
+	User        string    `json:"user"`
 }
 
 func (p *CreateProductDTO) Mapping(product string, user string) error {
@@ -51,13 +51,11 @@ func (p *CreateProductDTO) Mapping(product string, user string) error {
 	p.Price = float32(price)
 	p.Description = splitProduct[2]
 	p.User = user
-	p.BuyAt = nil
 	if len(splitProduct) == 4 {
-		t, err := time.ParseInLocation(dateTimeFormatJSON, splitProduct[3], time.Local)
+		p.BuyAt, err = time.ParseInLocation(dateTimeFormatJSON, splitProduct[3], time.Local)
 		if err != nil {
 			return err
 		}
-		p.BuyAt = &t
 	}
 
 	return nil
@@ -78,11 +76,10 @@ func (p *UpdateProductDTO) Mapping(product string) error {
 			}
 			p.Price = float32(price)
 			p.Description = splitProduct[3]
-			buyAt, err := time.ParseInLocation(dateTimeFormatJSON, splitProduct[4], time.Local)
+			p.BuyAt, err = time.ParseInLocation(dateTimeFormatJSON, splitProduct[4], time.Local)
 			if err != nil {
 				return err
 			}
-			p.BuyAt = &buyAt
 		case 4:
 			p.Name = splitProduct[1]
 			price, err := strconv.ParseFloat(splitProduct[2], 32)

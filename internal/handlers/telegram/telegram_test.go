@@ -78,15 +78,6 @@ func TestGetProducts(t *testing.T) {
 	require.GreaterOrEqualf(t, len(products), 1, "Должно быть больше 0 продуктов.")
 }
 
-func TestGetProduct(t *testing.T) {
-	data := InputData{
-		Arguments: "99646b1f-181f-43f7-bf5d-25fc27883293",
-	}
-	_product, err := botHandler.GetProduct(data)
-	require.Nilf(t, err, "Не должно быть ошибки", err)
-	require.IsTypef(t, product.GetProductDTO{}, _product, "Должно быть больше 0 продуктов.")
-}
-
 func TestGetReport(t *testing.T) {
 	data := InputData{
 		Arguments: "",

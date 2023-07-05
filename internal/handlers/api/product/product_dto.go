@@ -9,10 +9,11 @@ const dateTimeFormatJSON = "02.01.2006 15:04"
 const dateTimeFormatJSONWithoutTime = "02.01.2006"
 
 type CreateProductDTO struct {
-	Name        string     `json:"name"`
-	Price       float32    `json:"price"`
-	BuyAt       *time.Time `json:"buy_at,omitempty"`
-	Description string     `json:"description,omitempty"`
+	Name        string    `json:"name"`
+	Price       float32   `json:"price"`
+	BuyAt       time.Time `json:"buy_at,omitempty"`
+	Description string    `json:"description,omitempty"`
+	User        string    `json:"user"`
 }
 
 type UpdateProductDTO struct {
@@ -29,13 +30,10 @@ func (p *CreateProductDTO) UnmarshalJSON(bs []byte) error {
 		return err
 	}
 	if val, ok := result["buy_at"]; ok {
-		t, err := time.ParseInLocation(dateTimeFormatJSON, val.(string), time.Local)
+		p.BuyAt, err = time.ParseInLocation(dateTimeFormatJSON, val.(string), time.Local)
 		if err != nil {
 			return err
 		}
-		p.BuyAt = &t
-	} else {
-		p.BuyAt = nil
 	}
 	if val, ok := result["name"]; ok {
 		p.Name = val.(string)

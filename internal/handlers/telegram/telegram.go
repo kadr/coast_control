@@ -1,7 +1,6 @@
 package telegram
 
 import (
-	"errors"
 	"fmt"
 	tgbotapi "github.com/Syfaro/telegram-bot-api"
 	"github.com/cost_control/internal/handlers/telegram/product"
@@ -14,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -28,15 +28,12 @@ var (
 	begin       = time.Date(time.Now().Year(), time.Now().Month(), 1, 0, 0, 0, 0, time.Local)
 	beginMonth  = begin.Format("02.01.2006")
 	now         = time.Now().Format("02.01.2006")
+	nowCmd      = time.Now().Format("02.01.2006T15:04:05 +0400 +04")
 	commandsKey = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Добавить новый продукт", "add_product"),
-			tgbotapi.NewInlineKeyboardButtonData("Получить продукт", "get_product"),
-		),
-		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Получить продукты", fmt.Sprintf("get_products %s %s",
-				beginMonth, now)),
-			tgbotapi.NewInlineKeyboardButtonData("Удалить продукт", "delete_product"),
+				beginMonth, nowCmd)),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Отчет", fmt.Sprintf("get_report %s %s", beginMonth, now)),
@@ -65,7 +62,8 @@ func New(token string, db *mongo.Collection) (*BotHandler, error) {
 	return &BotHandler{productHandler: *product.New(service.New(repos)), Bot: *bot}, err
 }
 
-func (b BotHandler) Start(updateTimeout *int, offset *int) error {
+func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) error {
+	log.Print("Start telegram bot Api")
 	updateConfig := tgbotapi.NewUpdate(0)
 	if offset != nil {
 		updateConfig = tgbotapi.NewUpdate(*offset)
@@ -156,7 +154,6 @@ func (b BotHandler) Start(updateTimeout *int, offset *int) error {
 				}
 			}
 			if readyToSave {
-				productDTO.User = inputData.UserName
 				msg.Text, err = b.AddProduct(*productDTO)
 				msg.ReplyMarkup = commandsKey
 				if err != nil {
@@ -179,29 +176,14 @@ func (b BotHandler) Start(updateTimeout *int, offset *int) error {
 				continue
 			}
 			var text strings.Builder
+			text.WriteString(fmt.Sprintf("Период: %s - %s\n", beginMonth, now))
 			for _, _product := range products {
-				text.WriteString(fmt.Sprintf("ID: %s\nНазвание: %s\nЦена: %.2f руб.\nОписание: %s\nДата покупки: %s\n"+
-					"Пользователь: %s\n\n", _product.Id, _product.Name, _product.Price, _product.Description,
+				text.WriteString(fmt.Sprintf("Название: %s\nЦена: %.2f руб.\nОписание: %s\n"+
+					"Дата покупки: %s\nПользователь: %s\n\n", _product.Name, _product.Price, _product.Description,
 					_product.BuyAt.Format(inputDateFormat), _product.User))
 			}
+			msg.ReplyMarkup = commandsKey
 			msg.Text = text.String()
-			_, err = b.Bot.Send(msg)
-			if err != nil {
-				log.Print(err)
-			}
-		case "get_product":
-			_product, err := b.GetProduct(inputData)
-			if err != nil {
-				msg.Text = err.Error()
-				_, err = b.Bot.Send(msg)
-				if err != nil {
-					log.Print(err)
-				}
-				continue
-			}
-			msg.Text = fmt.Sprintf("ID: %s\nНазвание: %s\nЦена: %.2f руб.\nОписание: %s\nДата покупки: %s\nПользователь: %s",
-				inputData.Arguments, _product.Name, _product.Price, _product.Description, _product.BuyAt.Format(inputDateFormat),
-				_product.User)
 			_, err = b.Bot.Send(msg)
 			if err != nil {
 				log.Print(err)
@@ -222,22 +204,9 @@ func (b BotHandler) Start(updateTimeout *int, offset *int) error {
 					sumByUser.WriteString(fmt.Sprintf("%s: %.2f руб.\n", key, sum))
 				}
 			}
-			msg.Text = fmt.Sprintf("%sИтоговая сумма: %.2f руб.", sumByUser.String(), report["sum"])
-			_, err = b.Bot.Send(msg)
-			if err != nil {
-				log.Print(err)
-			}
-		case "delete_product":
-			err = b.DeleteProduct(inputData)
-			if err != nil {
-				msg.Text = err.Error()
-				_, err = b.Bot.Send(msg)
-				if err != nil {
-					log.Print(err)
-				}
-				continue
-			}
-			msg.Text = "Продукт был удален."
+			msg.Text = fmt.Sprintf("Период: %s - %s\n%sИтоговая сумма: %.2f руб.", beginMonth, now,
+				sumByUser.String(), report["sum"])
+			msg.ReplyMarkup = commandsKey
 			_, err = b.Bot.Send(msg)
 			if err != nil {
 				log.Print(err)
@@ -255,6 +224,7 @@ func (b BotHandler) Start(updateTimeout *int, offset *int) error {
 		}
 
 	}
+	wg.Done()
 	return nil
 }
 
@@ -266,25 +236,6 @@ func (b BotHandler) AddProduct(productDto product.CreateProductDTO) (string, err
 	}
 
 	return "Продукт добавлен", nil
-}
-
-func (b BotHandler) GetProduct(data InputData) (product.GetProductDTO, error) {
-	var err error
-	if len(data.Arguments) == 0 {
-		return product.GetProductDTO{}, errors.New("Не переданы идентификатор продукта.")
-	}
-	_product, err := b.productHandler.GetById(data.Arguments)
-	if err != nil {
-		return product.GetProductDTO{}, errors.New(fmt.Sprintf("Не удалось выполнить запрос. %v", err))
-	}
-	return product.GetProductDTO{
-		Id:          _product.Id,
-		Name:        _product.Name,
-		Price:       _product.Price,
-		BuyAt:       &_product.BuyAt,
-		Description: _product.Description,
-		User:        _product.User,
-	}, nil
 }
 
 func (b BotHandler) GetProducts(data InputData) ([]product.GetProductDTO, error) {
@@ -299,21 +250,13 @@ func (b BotHandler) GetProducts(data InputData) ([]product.GetProductDTO, error)
 			Name:        _product.Name,
 			Price:       _product.Price,
 			Description: _product.Description,
-			BuyAt:       &_product.BuyAt,
+			BuyAt:       _product.BuyAt,
+			User:        _product.User,
 		})
 	}
 
 	return getProducts, nil
 
-}
-
-func (b BotHandler) DeleteProduct(data InputData) error {
-	err := b.productHandler.Delete(data.Arguments)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Ну удалось удалить пролукт с id: %s. %v", data.Arguments, err))
-	}
-
-	return nil
 }
 
 func (b BotHandler) GetReport(data InputData) (map[string]float32, error) {
@@ -383,19 +326,19 @@ func prepareAddProductData(data InputData, productDto *product.CreateProductDTO)
 			result["text"] = "Введите цену продукта. Цена должна начинаться со знака +"
 		}
 		return result, err
-	} else if productDto.BuyAt == nil {
+	} else if productDto.BuyAt.IsZero() {
 		if strings.Contains(data.Arguments, "+") {
 			data.Arguments = strings.Replace(data.Arguments, "+", "", 1)
 			data.Arguments = strings.TrimSpace(data.Arguments)
-			date, err := time.ParseInLocation(inputDateFormat, data.Arguments, time.Local)
+			productDto.BuyAt, err = time.ParseInLocation(inputDateFormat, data.Arguments, time.Local)
 			if err != nil {
 				log.Print(err)
 				return result, err
 			}
-			productDto.BuyAt = &date
 			result["text"] = fmt.Sprintf("Название: %s\nЦена: %.2f\nДата покупки: %s\nСохранить?",
 				productDto.Name, productDto.Price, productDto.BuyAt.Format(inputDateFormat))
 			result["save"] = saveProduct
+			productDto.User = data.UserName
 		} else {
 			result["text"] = "Введите дату покупки продукта (не обязательно). Дата должна начинаться со знака +"
 		}

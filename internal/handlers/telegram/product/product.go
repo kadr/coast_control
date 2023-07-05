@@ -2,7 +2,7 @@ package product
 
 import (
 	"context"
-	"github.com/cost_control/internal/models"
+	"github.com/cost_control/internal/service"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strings"
@@ -10,10 +10,9 @@ import (
 )
 
 type IProductService interface {
-	Create(ctx context.Context, product models.Product) (string, error)
-	Update(ctx context.Context, id string, product models.Product) error
-	GetAll(ctx context.Context, filter interface{}) ([]models.Product, error)
-	GetById(ctx context.Context, id string) (models.Product, error)
+	Create(ctx context.Context, product service.ProductServiceInput) (string, error)
+	GetAll(ctx context.Context, filter interface{}) ([]service.ProductServiceOutput, error)
+	GetById(ctx context.Context, id string) (service.ProductServiceOutput, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -26,16 +25,14 @@ func New(productService IProductService) *ProductBotHandler {
 }
 
 func (pah ProductBotHandler) Create(dto CreateProductDTO) (string, error) {
-	product, err := models.NewProduct(
-		dto.Name,
-		dto.Description,
-		dto.Price,
-		dto.BuyAt,
-		dto.User,
-	)
-	if err != nil {
-		return "", err
+	product := service.ProductServiceInput{
+		Name:        dto.Name,
+		Description: dto.Description,
+		Price:       dto.Price,
+		BuyAt:       dto.BuyAt,
+		User:        dto.User,
 	}
+
 	id, err := pah.productService.Create(context.Background(), product)
 	if err != nil {
 		return "", err
@@ -44,39 +41,18 @@ func (pah ProductBotHandler) Create(dto CreateProductDTO) (string, error) {
 	return id, nil
 }
 
-func (pah ProductBotHandler) Update(dto UpdateProductDTO) error {
-	product := models.Product{}
-	if len(dto.Name) > 0 {
-		product.Name = dto.Name
-	}
-	if dto.Price > 0 {
-		product.Price = dto.Price
-	}
-	if len(dto.Description) > 0 {
-		product.Description = dto.Description
-	}
-	if dto.BuyAt != nil {
-		product.BuyAt = *dto.BuyAt
-	}
-	err := pah.productService.Update(context.Background(), dto.Id, product)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-func (pah ProductBotHandler) GetById(id string) (models.Product, error) {
+func (pah ProductBotHandler) GetById(id string) (service.ProductServiceOutput, error) {
 	product, err := pah.productService.GetById(context.Background(), id)
 	if err != nil {
-		return models.Product{}, err
+		return service.ProductServiceOutput{}, err
 	}
 	return product, nil
 }
-func (pah ProductBotHandler) Get(filter string) ([]models.Product, error) {
+func (pah ProductBotHandler) Get(filter string) ([]service.ProductServiceOutput, error) {
 	preparedFilter := prepareFilter(filter)
 	products, err := pah.productService.GetAll(context.Background(), preparedFilter)
 	if err != nil {
-		return []models.Product{}, err
+		return []service.ProductServiceOutput{}, err
 	}
 
 	return products, nil
@@ -123,7 +99,7 @@ func prepareFilter(filter string) bson.M {
 		}
 		preparedFilter["buy_at"] = bson.M{
 			"$gte": primitive.NewDateTimeFromTime(from),
-			"$lt":  primitive.NewDateTimeFromTime(to),
+			"$lte": primitive.NewDateTimeFromTime(to),
 		}
 	case len(splitFilter) == 1:
 		date, err := time.ParseInLocation(dateTimeFormatJSONWithoutTime, splitFilter[0], time.Local)
@@ -133,7 +109,7 @@ func prepareFilter(filter string) bson.M {
 		if date.Before(time.Now()) {
 			preparedFilter["buy_at"] = bson.M{"$gte": primitive.NewDateTimeFromTime(date)}
 		} else {
-			preparedFilter["buy_at"] = bson.M{"$lt": primitive.NewDateTimeFromTime(date)}
+			preparedFilter["buy_at"] = bson.M{"$lte": primitive.NewDateTimeFromTime(date)}
 		}
 	}
 
