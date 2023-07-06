@@ -4,7 +4,7 @@ import (
 	"github.com/cost_control/internal/handlers/rpc/product"
 	pb "github.com/cost_control/internal/handlers/rpc/src"
 	productRepos "github.com/cost_control/internal/repository/product"
-	"github.com/cost_control/internal/service"
+	product2 "github.com/cost_control/internal/service/product"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -12,13 +12,15 @@ import (
 	"net"
 )
 
+const productCollection = "product"
+
 type RpcHandler struct {
 	productRpcServer product.ProductRpcServer
 }
 
-func New(db *mongo.Collection) RpcHandler {
-	repos := productRepos.New(db)
-	return RpcHandler{productRpcServer: product.New(service.New(repos))}
+func New(db *mongo.Database) RpcHandler {
+	repos := productRepos.New(db.Collection(productCollection))
+	return RpcHandler{productRpcServer: product.New(product2.New(repos))}
 }
 
 func (rh RpcHandler) Start() error {

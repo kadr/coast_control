@@ -3,15 +3,15 @@ package product
 import (
 	"context"
 	pb "github.com/cost_control/internal/handlers/rpc/src"
-	"github.com/cost_control/internal/service"
+	"github.com/cost_control/internal/service/product"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type IProductService interface {
-	Create(ctx context.Context, product service.ProductServiceInput) (string, error)
-	Update(ctx context.Context, id string, product service.ProductServiceInput) error
-	GetAll(ctx context.Context, filter interface{}) ([]service.ProductServiceOutput, error)
-	GetById(ctx context.Context, id string) (service.ProductServiceOutput, error)
+	Create(ctx context.Context, product product.ProductServiceInput) (string, error)
+	Update(ctx context.Context, id string, product product.ProductServiceInput) error
+	GetAll(ctx context.Context, filter interface{}) ([]product.ProductServiceOutput, error)
+	GetById(ctx context.Context, id string) (product.ProductServiceOutput, error)
 	Delete(ctx context.Context, id string) error
 }
 

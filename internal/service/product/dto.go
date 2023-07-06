@@ -1,4 +1,4 @@
-package service
+package product
 
 import (
 	"github.com/cost_control/internal/models"

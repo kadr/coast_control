@@ -2,7 +2,7 @@ package product
 
 import (
 	"context"
-	"github.com/cost_control/internal/service"
+	"github.com/cost_control/internal/service/product"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strings"
@@ -10,9 +10,9 @@ import (
 )
 
 type IProductService interface {
-	Create(ctx context.Context, product service.ProductServiceInput) (string, error)
-	GetAll(ctx context.Context, filter interface{}) ([]service.ProductServiceOutput, error)
-	GetById(ctx context.Context, id string) (service.ProductServiceOutput, error)
+	Create(ctx context.Context, product product.ProductServiceInput) (string, error)
+	GetAll(ctx context.Context, filter interface{}) ([]product.ProductServiceOutput, error)
+	GetById(ctx context.Context, id string) (product.ProductServiceOutput, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -25,7 +25,7 @@ func New(productService IProductService) *ProductBotHandler {
 }
 
 func (pah ProductBotHandler) Create(dto CreateProductDTO) (string, error) {
-	product := service.ProductServiceInput{
+	productInput := product.ProductServiceInput{
 		Name:        dto.Name,
 		Description: dto.Description,
 		Price:       dto.Price,
@@ -33,7 +33,7 @@ func (pah ProductBotHandler) Create(dto CreateProductDTO) (string, error) {
 		User:        dto.User,
 	}
 
-	id, err := pah.productService.Create(context.Background(), product)
+	id, err := pah.productService.Create(context.Background(), productInput)
 	if err != nil {
 		return "", err
 	}
@@ -41,18 +41,18 @@ func (pah ProductBotHandler) Create(dto CreateProductDTO) (string, error) {
 	return id, nil
 }
 
-func (pah ProductBotHandler) GetById(id string) (service.ProductServiceOutput, error) {
-	product, err := pah.productService.GetById(context.Background(), id)
+func (pah ProductBotHandler) GetById(id string) (product.ProductServiceOutput, error) {
+	findedProduct, err := pah.productService.GetById(context.Background(), id)
 	if err != nil {
-		return service.ProductServiceOutput{}, err
+		return product.ProductServiceOutput{}, err
 	}
-	return product, nil
+	return findedProduct, nil
 }
-func (pah ProductBotHandler) Get(filter string) ([]service.ProductServiceOutput, error) {
+func (pah ProductBotHandler) Get(filter string) ([]product.ProductServiceOutput, error) {
 	preparedFilter := prepareFilter(filter)
 	products, err := pah.productService.GetAll(context.Background(), preparedFilter)
 	if err != nil {
-		return []service.ProductServiceOutput{}, err
+		return []product.ProductServiceOutput{}, err
 	}
 
 	return products, nil

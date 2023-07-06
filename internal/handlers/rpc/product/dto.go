@@ -2,11 +2,11 @@ package product
 
 import (
 	pb "github.com/cost_control/internal/handlers/rpc/src"
-	"github.com/cost_control/internal/service"
+	"github.com/cost_control/internal/service/product"
 )
 
-func CreateProductInput(request *pb.CreateProductRequest) service.ProductServiceInput {
-	product := service.ProductServiceInput{
+func CreateProductInput(request *pb.CreateProductRequest) product.ProductServiceInput {
+	product := product.ProductServiceInput{
 		Name:  request.Name,
 		Price: request.Price,
 		User:  request.User,
@@ -21,8 +21,8 @@ func CreateProductInput(request *pb.CreateProductRequest) service.ProductService
 	return product
 }
 
-func UpdateProductInput(request *pb.UpdateProductRequest) service.ProductServiceInput {
-	product := service.ProductServiceInput{}
+func UpdateProductInput(request *pb.UpdateProductRequest) product.ProductServiceInput {
+	product := product.ProductServiceInput{}
 	if request.Name != nil {
 		product.Name = *request.Name
 	}
