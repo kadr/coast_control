@@ -3,7 +3,7 @@ package product
 import (
 	"context"
 	"github.com/cost_control/internal/handlers/utils"
-	"github.com/cost_control/internal/service"
+	"github.com/cost_control/internal/service/product"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,10 +12,10 @@ import (
 )
 
 type IProductService interface {
-	Create(ctx context.Context, product service.ProductServiceInput) (string, error)
-	Update(ctx context.Context, id string, product service.ProductServiceInput) error
-	GetAll(ctx context.Context, filter interface{}) ([]service.ProductServiceOutput, error)
-	GetById(ctx context.Context, id string) (service.ProductServiceOutput, error)
+	Create(ctx context.Context, product product.ProductServiceInput) (string, error)
+	Update(ctx context.Context, id string, product product.ProductServiceInput) error
+	GetAll(ctx context.Context, filter interface{}) ([]product.ProductServiceOutput, error)
+	GetById(ctx context.Context, id string) (product.ProductServiceOutput, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -34,7 +34,7 @@ func (pah ProductApiHandler) Create(c *gin.Context) {
 		pah.Response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	productInput := service.ProductServiceInput{
+	productInput := product.ProductServiceInput{
 		Name:        dto.Name,
 		Price:       dto.Price,
 		Description: dto.Description,
@@ -50,7 +50,7 @@ func (pah ProductApiHandler) Create(c *gin.Context) {
 }
 
 func (pah ProductApiHandler) Update(c *gin.Context) {
-	productInput := service.ProductServiceInput{}
+	productInput := product.ProductServiceInput{}
 	if err := c.BindJSON(&productInput); err != nil {
 		pah.Response.Error(c, http.StatusInternalServerError, err.Error())
 		return
