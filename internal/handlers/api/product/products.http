@@ -1,16 +1,19 @@
 POST http://0.0.0.0:10000/products
 Content-Type: Application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbWFpbCI6ImthZHIxOTg2QGdtYWlsLmNvbSIsImV4cCI6MTY4ODY1Mjg5MH0.AeULgG4ijQ2XCX2Dzz3VoBOCgHdfrTzVYOOb6Qyc-Oc
 
 {
   "name": "Каша",
   "price": 100,
   "buy_at": "22.06.2023 14:04",
-  "description": "Каша осяная с датой"
+  "description": "Каша осяная с датой",
+  "user": "kadr86"
 }
 
 ###
 POST http://0.0.0.0:10000/products
 Content-Type: Application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbWFpbCI6ImthZHIxOTg2QGdtYWlsLmNvbSIsImV4cCI6MTY4ODY1Mjg5MH0.AeULgG4ijQ2XCX2Dzz3VoBOCgHdfrTzVYOOb6Qyc-Oc
 
 {
   "name": "Каша",
@@ -23,8 +26,10 @@ Content-Type: Application/json
 
 GET http://0.0.0.0:10000/products
 Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbWFpbCI6ImthZHIxOTg2QGdtYWlsLmNvbSIsImV4cCI6MTY4ODY1Mjg5MH0.AeULgG4ijQ2XCX2Dzz3VoBOCgHdfrTzVYOOb6Qyc-Oc
 
 ###
 
 GET http://0.0.0.0:10000/products/report?from=01.06.2023&to=30.06.2023
 Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJFbWFpbCI6ImthZHIxOTg2QGdtYWlsLmNvbSIsImV4cCI6MTY4ODY1Mjg5MH0.AeULgG4ijQ2XCX2Dzz3VoBOCgHdfrTzVYOOb6Qyc-Oc

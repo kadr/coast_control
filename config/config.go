@@ -14,12 +14,13 @@ type Config struct {
 			Database   string `env:"DATABASE" env-default:"cost_control"`
 		}
 	}
-	SignedKey string `env:"SIGNED_KEY" env-required:"true"`
+	SignedKey        string `env:"SIGNED_KEY" env-required:"true"`
+	ExpiredAtMinutes uint   `env:"TOKEN_EXPIRED_AT_MINUTES" env-default:"60"`
 }
 
 func GetConfig() (*Config, error) {
 	var cfg Config
-
+	//os.Setenv("SIGNED_KEY", "asdasd893yrhfksd9873wyfhksadjbckdce")
 	err := cleanenv.ReadEnv(&cfg)
 	if err != nil {
 		return nil, errors.New("no config found")
