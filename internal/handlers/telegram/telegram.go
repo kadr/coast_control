@@ -5,7 +5,7 @@ import (
 	tgbotapi "github.com/Syfaro/telegram-bot-api"
 	"github.com/cost_control/internal/handlers/telegram/product"
 	productRepos "github.com/cost_control/internal/repository/product"
-	"github.com/cost_control/internal/service"
+	product2 "github.com/cost_control/internal/service/product"
 	"github.com/jdomzhang/goqr"
 	"go.mongodb.org/mongo-driver/mongo"
 	"image/jpeg"
@@ -41,6 +41,8 @@ var (
 	)
 )
 
+const productCollection = "product"
+
 type BotHandler struct {
 	productHandler product.ProductBotHandler
 	Bot            tgbotapi.BotAPI
@@ -52,14 +54,14 @@ type InputData struct {
 	Arguments string
 }
 
-func New(token string, db *mongo.Collection) (*BotHandler, error) {
+func New(token string, db *mongo.Database) (*BotHandler, error) {
 	bot, err := tgbotapi.NewBotAPI(token)
 
 	if err != nil {
 		return nil, err
 	}
-	repos := productRepos.New(db)
-	return &BotHandler{productHandler: *product.New(service.New(repos)), Bot: *bot}, err
+	repos := productRepos.New(db.Collection(productCollection))
+	return &BotHandler{productHandler: *product.New(product2.New(repos)), Bot: *bot}, err
 }
 
 func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) error {

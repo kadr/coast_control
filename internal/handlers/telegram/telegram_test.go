@@ -3,7 +3,7 @@ package telegram
 import (
 	"github.com/cost_control/internal/handlers/telegram/product"
 	productRepos "github.com/cost_control/internal/repository/product"
-	"github.com/cost_control/internal/service"
+	product2 "github.com/cost_control/internal/service/product"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
@@ -17,7 +17,7 @@ var botHandler BotHandler
 func TestMain(m *testing.M) {
 	// Write code here to run before tests
 	fakeStorage = productRepos.NewFakeDb()
-	botHandler = BotHandler{productHandler: *product.New(service.New(fakeStorage))}
+	botHandler = BotHandler{productHandler: *product.New(product2.New(fakeStorage))}
 	// Run tests
 	exitVal := m.Run()
 
