@@ -9,13 +9,12 @@ import (
 )
 
 type Config struct {
-	Host       string
-	Port       int
-	Database   string
-	Collection string
+	Host     string
+	Port     int
+	Database string
 }
 
-func NewMongoDB(cfg *Config) (*mongo.Collection, error) {
+func NewMongoDB(cfg *Config) (*mongo.Database, error) {
 	dbOptions := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%d", cfg.Host, cfg.Port))
 	client, err := mongo.NewClient(dbOptions)
 	if err != nil {
@@ -33,5 +32,5 @@ func NewMongoDB(cfg *Config) (*mongo.Collection, error) {
 		return nil, err
 	}
 
-	return client.Database(cfg.Database).Collection(cfg.Collection), nil
+	return client.Database(cfg.Database), nil
 }
