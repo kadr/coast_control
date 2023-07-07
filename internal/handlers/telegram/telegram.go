@@ -6,10 +6,10 @@ import (
 	"github.com/cost_control/internal/handlers/telegram/product"
 	productRepos "github.com/cost_control/internal/repository/product"
 	product2 "github.com/cost_control/internal/service/product"
+	"github.com/cost_control/pkg/logger"
 	"github.com/jdomzhang/goqr"
 	"go.mongodb.org/mongo-driver/mongo"
 	"image/jpeg"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -45,7 +45,8 @@ const productCollection = "product"
 
 type BotHandler struct {
 	productHandler product.ProductBotHandler
-	Bot            tgbotapi.BotAPI
+	bot            tgbotapi.BotAPI
+	log            logger.ILogger
 }
 
 type InputData struct {
@@ -54,18 +55,18 @@ type InputData struct {
 	Arguments string
 }
 
-func New(token string, db *mongo.Database) (*BotHandler, error) {
+func New(token string, db *mongo.Database, log logger.ILogger) (*BotHandler, error) {
 	bot, err := tgbotapi.NewBotAPI(token)
 
 	if err != nil {
 		return nil, err
 	}
 	repos := productRepos.New(db.Collection(productCollection))
-	return &BotHandler{productHandler: *product.New(product2.New(repos)), Bot: *bot}, err
+	return &BotHandler{productHandler: *product.New(product2.New(repos)), bot: *bot, log: log}, err
 }
 
 func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) error {
-	log.Print("Start telegram bot Api")
+	b.log.Info("Start telegram bot Api")
 	updateConfig := tgbotapi.NewUpdate(0)
 	if offset != nil {
 		updateConfig = tgbotapi.NewUpdate(*offset)
@@ -75,7 +76,7 @@ func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) e
 		updateConfig = tgbotapi.NewUpdate(*updateTimeout)
 	}
 
-	updates, err := b.Bot.GetUpdatesChan(updateConfig)
+	updates, err := b.bot.GetUpdatesChan(updateConfig)
 	if err != nil {
 		return err
 	}
@@ -114,9 +115,9 @@ func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) e
 			}
 			if update.Message.Photo != nil {
 				photo := *update.Message.Photo
-				inputData.Arguments, err = getQrCodeText(photo, b)
+				inputData.Arguments, err = getQrCodeText(photo, b, b.log)
 				if err != nil {
-					log.Print(err)
+					b.log.Info(err)
 					return err
 				}
 				command = "add_product"
@@ -127,14 +128,14 @@ func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) e
 		case "start":
 			msg.Text = "Привет, тебя приветствует система контроля расходов. Выбери что ты хочешь сделать."
 			msg.ReplyMarkup = commandsKey
-			_, err = b.Bot.Send(msg)
+			_, err = b.bot.Send(msg)
 			if err != nil {
-				log.Print(err)
+				b.log.Info(err)
 			}
 		case "add_product":
 			var result map[string]string
 			if !readyToSave {
-				result, err = prepareAddProductData(inputData, productDTO)
+				result, err = prepareAddProductData(inputData, productDTO, b.log)
 			}
 			if err != nil {
 				msg.Text = err.Error()
@@ -148,9 +149,9 @@ func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) e
 						),
 					)
 					readyToSave = true
-					_, err = b.Bot.Send(msg)
+					_, err = b.bot.Send(msg)
 					if err != nil {
-						log.Print(err)
+						b.log.Info(err)
 					}
 					continue
 				}
@@ -159,21 +160,21 @@ func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) e
 				msg.Text, err = b.AddProduct(*productDTO)
 				msg.ReplyMarkup = commandsKey
 				if err != nil {
-					log.Print(err)
+					b.log.Info(err)
 					msg.Text = err.Error()
 				}
 			}
-			_, err = b.Bot.Send(msg)
+			_, err = b.bot.Send(msg)
 			if err != nil {
-				log.Print(err)
+				b.log.Info(err)
 			}
 		case "get_products":
 			products, err := b.GetProducts(inputData)
 			if err != nil {
 				msg.Text = err.Error()
-				_, err = b.Bot.Send(msg)
+				_, err = b.bot.Send(msg)
 				if err != nil {
-					log.Print(err)
+					b.log.Info(err)
 				}
 				continue
 			}
@@ -186,17 +187,17 @@ func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) e
 			}
 			msg.ReplyMarkup = commandsKey
 			msg.Text = text.String()
-			_, err = b.Bot.Send(msg)
+			_, err = b.bot.Send(msg)
 			if err != nil {
-				log.Print(err)
+				b.log.Info(err)
 			}
 		case "get_report":
 			report, err := b.GetReport(inputData)
 			if err != nil {
 				msg.Text = err.Error()
-				_, err = b.Bot.Send(msg)
+				_, err = b.bot.Send(msg)
 				if err != nil {
-					log.Print(err)
+					b.log.Info(err)
 				}
 				continue
 			}
@@ -209,9 +210,9 @@ func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) e
 			msg.Text = fmt.Sprintf("Период: %s - %s\n%sИтоговая сумма: %.2f руб.", beginMonth, now,
 				sumByUser.String(), report["sum"])
 			msg.ReplyMarkup = commandsKey
-			_, err = b.Bot.Send(msg)
+			_, err = b.bot.Send(msg)
 			if err != nil {
-				log.Print(err)
+				b.log.Info(err)
 			}
 		case "cancel_add_product":
 			inputData = InputData{}
@@ -219,9 +220,9 @@ func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) e
 			readyToSave = false
 		default:
 			msg.Text = "Не понял!"
-			_, err = b.Bot.Send(msg)
+			_, err = b.bot.Send(msg)
 			if err != nil {
-				log.Print(err)
+				b.log.Info(err)
 			}
 		}
 
@@ -233,7 +234,7 @@ func (b BotHandler) Start(wg *sync.WaitGroup, updateTimeout *int, offset *int) e
 func (b BotHandler) AddProduct(productDto product.CreateProductDTO) (string, error) {
 	_, err := b.productHandler.Create(productDto)
 	if err != nil {
-		log.Print(err)
+		b.log.Info(err)
 		return "", err
 	}
 
@@ -243,7 +244,7 @@ func (b BotHandler) AddProduct(productDto product.CreateProductDTO) (string, err
 func (b BotHandler) GetProducts(data InputData) ([]product.GetProductDTO, error) {
 	products, err := b.productHandler.Get(data.Arguments)
 	if err != nil {
-		log.Print(err)
+		b.log.Info(err)
 		return nil, err
 	}
 	var getProducts []product.GetProductDTO
@@ -270,26 +271,26 @@ func (b BotHandler) GetReport(data InputData) (map[string]float32, error) {
 	return report, nil
 }
 
-func getQrCodeText(photo []tgbotapi.PhotoSize, b BotHandler) (string, error) {
-	resp, err := b.Bot.GetFile(tgbotapi.FileConfig{photo[1].FileID})
+func getQrCodeText(photo []tgbotapi.PhotoSize, b BotHandler, log logger.ILogger) (string, error) {
+	resp, err := b.bot.GetFile(tgbotapi.FileConfig{photo[1].FileID})
 	if err != nil {
 		return "", err
 	}
-	url := fmt.Sprintf("%s/file/bot%s/%s", telegramApiHost, b.Bot.Token, resp.FilePath)
+	url := fmt.Sprintf("%s/file/bot%s/%s", telegramApiHost, b.bot.Token, resp.FilePath)
 	r, err := http.Get(url) //загружаем изображение с сервера telegram
 	if err != nil {
-		log.Printf("Не удалось загрузить изображение с сервера. %v\n", err)
+		log.Infof("Не удалось загрузить изображение с сервера. %v\n", err)
 		return "", err
 	}
 	defer r.Body.Close()
 	img, err := jpeg.Decode(r.Body) //конвертируем io.Reader в image.Image
 	if err != nil {
-		log.Printf("Не смог декодировать изображение: %v\n", err)
+		log.Infof("Не смог декодировать изображение: %v\n", err)
 		return "", err
 	}
 	qrCodes, err := goqr.Recognize(img)
 	if err != nil {
-		log.Printf("Recognize failed: %v\n", err)
+		log.Infof("Recognize failed: %v\n", err)
 		return "", err
 	}
 	for _, qrCode := range qrCodes {
@@ -300,7 +301,7 @@ func getQrCodeText(photo []tgbotapi.PhotoSize, b BotHandler) (string, error) {
 
 }
 
-func prepareAddProductData(data InputData, productDto *product.CreateProductDTO) (map[string]string, error) {
+func prepareAddProductData(data InputData, productDto *product.CreateProductDTO, log logger.ILogger) (map[string]string, error) {
 	var err error
 	result := make(map[string]string)
 	if productDto.Name == "" {
@@ -334,7 +335,7 @@ func prepareAddProductData(data InputData, productDto *product.CreateProductDTO)
 			data.Arguments = strings.TrimSpace(data.Arguments)
 			productDto.BuyAt, err = time.ParseInLocation(inputDateFormat, data.Arguments, time.Local)
 			if err != nil {
-				log.Print(err)
+				log.Info(err)
 				return result, err
 			}
 			result["text"] = fmt.Sprintf("Название: %s\nЦена: %.2f\nДата покупки: %s\nСохранить?",

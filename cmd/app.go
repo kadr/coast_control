@@ -6,12 +6,14 @@ import (
 	"github.com/cost_control/internal/handlers/api"
 	"github.com/cost_control/internal/handlers/rpc"
 	"github.com/cost_control/internal/handlers/telegram"
+	"github.com/cost_control/pkg/logger"
 	"github.com/cost_control/pkg/repository"
-	"log"
 	"sync"
 )
 
 func main() {
+	log := logger.New()
+	log.Info("инициализация конфигурации")
 	cfg, err := config.GetConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -26,29 +28,31 @@ func main() {
 	}
 
 	apiHandlers := api.New(db, cfg)
-	telegramBot, err := telegram.New(cfg.TelegramBotToken, db)
+	telegramBot, err := telegram.New(cfg.TelegramBotToken, db, log)
+	rpcHandler := rpc.New(db, cfg, log)
 	if err != nil {
 		log.Fatal(err)
 	}
-	rpcHandler := rpc.New(db, cfg)
+
 	var wg sync.WaitGroup
 	wg.Add(3)
 	srv := new(cost_control.Server)
-	go func(wg *sync.WaitGroup, port int) {
-		log.Print("Start Rest Api server")
+
+	go func(wg *sync.WaitGroup, port int, log logger.ILogger) {
+		log.Info("Start Rest Api server")
 		if err := srv.Run(port, apiHandlers.InitRoutes()); err != nil {
 			log.Fatal(err)
 			wg.Done()
 		}
-	}(&wg, cfg.Rest.Port)
+	}(&wg, cfg.Rest.Port, log)
 
-	go func(wg *sync.WaitGroup) {
+	go func(wg *sync.WaitGroup, log logger.ILogger) {
 		err = telegramBot.Start(wg, nil, nil)
 		if err != nil {
 			log.Fatal(err)
 			wg.Done()
 		}
-	}(&wg)
+	}(&wg, log)
 
 	err = rpcHandler.Start()
 	if err != nil {
