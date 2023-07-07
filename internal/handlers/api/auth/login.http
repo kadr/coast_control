@@ -2,5 +2,6 @@ POST http://0.0.0.0:10000/login
 Content-Type: Application/json
 
 {
-  "email": "kadr1986@gmail.com"
+  "email": "kadr1986@gmail.com",
+  "password": "156489"
 }

@@ -33,7 +33,7 @@ func New(db *mongo.Database, config *config.Config) *ApiHandler {
 
 func (h *ApiHandler) InitRoutes() *gin.Engine {
 	router := gin.New()
-	//router.Use(gin.Recovery())
+	router.Use(gin.Recovery())
 
 	router.POST("/login", h.auth.Login)
 	productsEndpoints := router.Group("/products", middleware.AuthMiddleware)

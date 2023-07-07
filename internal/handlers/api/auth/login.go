@@ -6,6 +6,7 @@ import (
 	"github.com/cost_control/internal/handlers/utils"
 	"github.com/cost_control/internal/service/user"
 	"github.com/cost_control/pkg/jwt"
+	"github.com/cost_control/pkg/password_hasher"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -36,12 +37,20 @@ func (a Auth) Login(c *gin.Context) {
 		a.Response.Error(c, http.StatusBadRequest, "не передан email")
 		return
 	}
-	findedUser, err := a.userService.GetByEmail(context.Background(), email)
+	if _, ok = request["password"]; !ok {
+		a.Response.Error(c, http.StatusBadRequest, "не передан пароль")
+		return
+	}
+	findUser, err := a.userService.GetByEmail(context.Background(), email)
 	if err != nil {
 		a.Response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	token := jwt.New(findedUser.Email, a.config.ExpiredAtMinutes)
+	if !password_hasher.Verify(findUser.Password, request["password"]) {
+		a.Response.Error(c, http.StatusBadRequest, "не корректные email или пароль")
+		return
+	}
+	token := jwt.New(findUser.Email, a.config.ExpiredAtMinutes)
 	generatedToken, err := token.Generate(a.config.SignedKey)
 	if err != nil {
 		a.Response.Error(c, http.StatusInternalServerError, err.Error())
