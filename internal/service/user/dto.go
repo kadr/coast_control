@@ -1,7 +1,8 @@
 package user
 
 type UserServiceOutput struct {
-	Id    string
-	Name  string
-	Email string
+	Id       string
+	Name     string
+	Email    string
+	Password string
 }

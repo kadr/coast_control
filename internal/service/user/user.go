@@ -22,5 +22,5 @@ func (u UserService) GetByEmail(ctx context.Context, email string) (UserServiceO
 	if err != nil {
 		return UserServiceOutput{}, err
 	}
-	return UserServiceOutput{Id: user.Id, Name: user.Name, Email: user.Email}, nil
+	return UserServiceOutput{Id: user.Id, Name: user.Name, Email: user.Email, Password: user.Password}, nil
 }
