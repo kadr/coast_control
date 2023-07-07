@@ -16,11 +16,17 @@ type Config struct {
 	}
 	SignedKey        string `env:"SIGNED_KEY" env-required:"true"`
 	ExpiredAtMinutes uint   `env:"TOKEN_EXPIRED_AT_MINUTES" env-default:"60"`
+	Rest             struct {
+		Port int `env:"REST_SERVER_PORT" env-default:"10000"`
+	}
+	Rpc struct {
+		Address string `env:"RPC_ADDRESS" env-default:":5300"`
+	}
+	TelegramBotToken string `env:"TELEGRAM_BOT_TOKEN" env-required:"true"`
 }
 
 func GetConfig() (*Config, error) {
 	var cfg Config
-	//os.Setenv("SIGNED_KEY", "asdasd893yrhfksd9873wyfhksadjbckdce")
 	err := cleanenv.ReadEnv(&cfg)
 	if err != nil {
 		return nil, errors.New("no config found")

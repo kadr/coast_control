@@ -11,11 +11,6 @@ import (
 	"sync"
 )
 
-const (
-	botToken          = "5836425300:AAG2azf8sY54f_Y9Mod1PM9vY6IzIWRpnq0"
-	RestApiServerPort = 10000
-)
-
 func main() {
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -31,21 +26,21 @@ func main() {
 	}
 
 	apiHandlers := api.New(db, cfg)
-	telegramBot, err := telegram.New(botToken, db)
+	telegramBot, err := telegram.New(cfg.TelegramBotToken, db)
 	if err != nil {
 		log.Fatal(err)
 	}
-	rpcHandler := rpc.New(db)
+	rpcHandler := rpc.New(db, cfg)
 	var wg sync.WaitGroup
 	wg.Add(3)
 	srv := new(cost_control.Server)
-	go func(wg *sync.WaitGroup, restApiServerPort int) {
+	go func(wg *sync.WaitGroup, port int) {
 		log.Print("Start Rest Api server")
-		if err := srv.Run(restApiServerPort, apiHandlers.InitRoutes()); err != nil {
+		if err := srv.Run(port, apiHandlers.InitRoutes()); err != nil {
 			log.Fatal(err)
 			wg.Done()
 		}
-	}(&wg, RestApiServerPort)
+	}(&wg, cfg.Rest.Port)
 
 	go func(wg *sync.WaitGroup) {
 		err = telegramBot.Start(wg, nil, nil)
