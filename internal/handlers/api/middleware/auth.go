@@ -7,7 +7,15 @@ import (
 	"os"
 )
 
-func AuthMiddleware(c *gin.Context) {
+type AuthMiddleware struct {
+	jwtManager *jwt.Token
+}
+
+func New() *AuthMiddleware {
+	return &AuthMiddleware{jwtManager: jwt.New()}
+}
+
+func (am AuthMiddleware) AuthMiddleware(c *gin.Context) {
 	token := c.Request.Header.Get("Authorization")
 
 	if token == "" {
@@ -15,7 +23,7 @@ func AuthMiddleware(c *gin.Context) {
 		return
 	}
 
-	if !jwt.IsValid(token, os.Getenv("SIGNED_KEY")) {
+	if !am.jwtManager.IsValid(token, os.Getenv("SIGNED_KEY")) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}

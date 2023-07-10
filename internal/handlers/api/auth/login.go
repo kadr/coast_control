@@ -16,13 +16,20 @@ type IUserService interface {
 }
 
 type Auth struct {
-	userService IUserService
-	Response    utils.Response
-	config      *config.Config
+	userService   IUserService
+	Response      utils.Response
+	config        *config.Config
+	jwtManager    *jwt.Token
+	hasherManager *password_hasher.PasswordHasher
 }
 
 func New(userService IUserService, config *config.Config) *Auth {
-	return &Auth{userService: userService, config: config}
+	return &Auth{
+		userService:   userService,
+		config:        config,
+		jwtManager:    jwt.New(),
+		hasherManager: password_hasher.New(),
+	}
 }
 
 func (a Auth) Login(c *gin.Context) {
@@ -46,12 +53,11 @@ func (a Auth) Login(c *gin.Context) {
 		a.Response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if !password_hasher.Verify(findUser.Password, request["password"]) {
+	if !a.hasherManager.Verify(findUser.Password, request["password"]) {
 		a.Response.Error(c, http.StatusBadRequest, "не корректные email или пароль")
 		return
 	}
-	token := jwt.New(findUser.Email, a.config.ExpiredAtMinutes)
-	generatedToken, err := token.Generate(a.config.SignedKey)
+	generatedToken, err := a.jwtManager.Generate(findUser.Email, a.config.ExpiredAtMinutes, a.config.SignedKey)
 	if err != nil {
 		a.Response.Error(c, http.StatusInternalServerError, err.Error())
 		return

@@ -2,11 +2,17 @@ package password_hasher
 
 import "golang.org/x/crypto/bcrypt"
 
-func Gen(password string) (string, error) {
+type PasswordHasher struct{}
+
+func New() *PasswordHasher {
+	return &PasswordHasher{}
+}
+
+func (ph PasswordHasher) Gen(password string) (string, error) {
 	return hash(password)
 }
 
-func Verify(dbPassword string, inputPassword string) bool {
+func (ph PasswordHasher) Verify(dbPassword string, inputPassword string) bool {
 	if err := bcrypt.CompareHashAndPassword([]byte(dbPassword), []byte(inputPassword)); err != nil {
 		return false
 	}

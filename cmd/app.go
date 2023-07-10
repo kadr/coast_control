@@ -26,9 +26,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	apiHandlers := api.New(db, cfg)
-	telegramBot, err := telegram.New(cfg.TelegramBotToken, db, log)
+	telegramBot, err := telegram.New(cfg.TelegramBotToken, db, log, cfg)
 	rpcHandler := rpc.New(db, cfg, log)
 	if err != nil {
 		log.Fatal(err)

@@ -6,17 +6,20 @@ import (
 	"github.com/cost_control/config"
 	pb "github.com/cost_control/internal/handlers/rpc/src"
 	"github.com/cost_control/pkg/jwt"
+	"github.com/cost_control/pkg/password_hasher"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"strings"
 )
 
 type AuthInterceptor struct {
-	cfg *config.Config
+	cfg           *config.Config
+	jwtManager    *jwt.Token
+	hasherManager *password_hasher.PasswordHasher
 }
 
 func New(cfg *config.Config) *AuthInterceptor {
-	return &AuthInterceptor{cfg: cfg}
+	return &AuthInterceptor{cfg: cfg, jwtManager: jwt.New(), hasherManager: password_hasher.New()}
 }
 
 func (ai AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
@@ -37,7 +40,7 @@ func (ai AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 		if token, ok = md["authorization"]; !ok {
 			return nil, fmt.Errorf("не передан токен. %s", info.FullMethod)
 		}
-		if !jwt.IsValid(token[0], ai.cfg.SignedKey) {
+		if !ai.jwtManager.IsValid(token[0], ai.cfg.SignedKey) {
 			return nil, fmt.Errorf("токен не валиден. %s", info.FullMethod)
 		}
 		m, err := handler(ctx, req)
@@ -63,7 +66,7 @@ func (ai AuthInterceptor) Stream() grpc.StreamServerInterceptor {
 		if token, ok = md["authorization"]; !ok {
 			return fmt.Errorf("не передан токен. %s", info.FullMethod)
 		}
-		if !jwt.IsValid(token[0], ai.cfg.SignedKey) {
+		if !ai.jwtManager.IsValid(token[0], ai.cfg.SignedKey) {
 			return fmt.Errorf("токен не валиден. %s", info.FullMethod)
 		}
 
